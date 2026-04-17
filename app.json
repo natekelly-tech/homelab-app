@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "homelab-app",
-    "slug": "homelab-app",
+    "name": "LabWatch",
+    "slug": "labwatch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.njkelly.homelabapp"
+      "package": "com.auxcon.labwatch"
     },
     "web": {
       "output": "static",

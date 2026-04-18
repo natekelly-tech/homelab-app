@@ -9,7 +9,7 @@ import {
   View
 } from 'react-native';
 
-const API_URL = 'http://192.168.2.137:8080';
+const API_URL = 'https://api.auxcon.dev';
 
 type ServiceResult = {
   name: string;

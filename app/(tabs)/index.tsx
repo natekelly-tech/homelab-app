@@ -1,6 +1,4 @@
-// app/(tabs)/index.tsx
-
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,7 +9,7 @@ import {
   View
 } from 'react-native';
 
-const API_URL = 'http://192.168.2.137:5000';
+const API_URL = 'http://192.168.2.137:8080';
 
 type ServiceResult = {
   name: string;
@@ -74,7 +72,7 @@ export default function DashboardScreen() {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>⚠️ {error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchStatus}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
@@ -85,11 +83,9 @@ export default function DashboardScreen() {
   return (
     <View style={styles.container}>
 
-      {/* Header */}
-      <Text style={styles.title}>🖥️ Homelab Monitor</Text>
+      <Text style={styles.title}>LabWatch</Text>
       <Text style={styles.subtitle}>Last checked: {lastChecked}</Text>
 
-      {/* Summary boxes */}
       <View style={styles.summaryRow}>
         <View style={styles.summaryBox}>
           <Text style={[styles.summaryNumber, { color: '#60a5fa' }]}>{data?.total}</Text>
@@ -105,7 +101,6 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Service cards */}
       <FlatList
         data={data?.results}
         keyExtractor={(item) => item.name}
@@ -139,9 +134,8 @@ export default function DashboardScreen() {
         )}
       />
 
-      {/* Manual refresh button */}
       <TouchableOpacity style={styles.refreshButton} onPress={fetchStatus}>
-        <Text style={styles.refreshText}>↻ Refresh Now</Text>
+        <Text style={styles.refreshText}>Refresh Now</Text>
       </TouchableOpacity>
 
     </View>

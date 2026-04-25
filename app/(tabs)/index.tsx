@@ -1,263 +1,422 @@
-﻿import { useEffect, useState } from 'react';
+/**
+ * app/(tabs)/index.tsx
+ * LabWatch — Dashboard Screen
+ *
+ * The only production-grade screen that existed before the pivot.
+ * Rewired to use the LabWatch design system (theme.ts + primitives).
+ * Functional logic is unchanged — URL is still hardcoded on line ~30.
+ * Step A of the pivot roadmap (AsyncStorage + Settings screen) will
+ * replace the hardcoded URL with a user-configurable value.
+ *
+ * TODO (Step A): replace API_URL constant with getBackendUrl() from
+ * src/storage/backend.ts once AsyncStorage layer is in place.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ActivityIndicator,
+  View,
+  Text,
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
+  SafeAreaView,
+  StatusBar,
   TouchableOpacity,
-  View
+  ActivityIndicator,
 } from 'react-native';
+import { Card } from '../../components/Card';
+import { StatusBadge } from '../../components/StatusBadge';
+import { MetricRow } from '../../components/MetricRow';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  statusColor,
+} from '../../constants/theme';
 
+// ─── TODO Step A ────────────────────────────────────────────────────────────
+// Replace this constant with getBackendUrl() from storage/backend.ts
+// so the URL is user-configurable with this as the default fallback.
 const API_URL = 'https://api.auxcon.dev';
+const POLL_INTERVAL_MS = 30_000;
+// ────────────────────────────────────────────────────────────────────────────
 
-type ServiceResult = {
+type Service = {
   name: string;
-  status: 'up' | 'down';
+  status: string;
   type: string;
-  target: string;
-  response_time_ms: number | null;
-  status_code: number | null;
+  response_time_ms?: number;
+  url?: string;
+  last_checked?: string;
 };
 
-type ApiResponse = {
-  total: number;
-  up: number;
-  down: number;
-  results: ServiceResult[];
-};
+type FetchState = 'idle' | 'loading' | 'refreshing' | 'error';
 
 export default function DashboardScreen() {
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastChecked, setLastChecked] = useState<string>('');
+  const [services, setServices] = useState<Service[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  const fetchStatus = async () => {
+  const fetchServices = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setFetchState('loading');
+    else setFetchState('refreshing');
+
     try {
-      const response = await fetch(`${API_URL}/status`);
-      const json = await response.json();
-      setData(json);
-      setError(null);
-      setLastChecked(new Date().toLocaleTimeString());
-    } catch (e) {
-      setError('Could not reach the API.\nMake sure your Flask server is running.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      const res = await fetch(`${API_URL}/status`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      // API returns either an array directly or { services: [...] }
+      const list: Service[] = Array.isArray(data) ? data : data.services ?? [];
+      setServices(list);
+      setErrorMessage(null);
+      setFetchState('idle');
+      setLastUpdated(
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      );
+    } catch (err: any) {
+      setErrorMessage(err?.message ?? 'Could not reach the API');
+      setFetchState('error');
     }
-  };
-
-  useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 30000);
-    return () => clearInterval(interval);
   }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchStatus();
+  // Initial load
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  // Polling
+  useEffect(() => {
+    const timer = setInterval(() => fetchServices(), POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [fetchServices]);
+
+  // ── Derived stats for the header ──────────────────────────────
+  const upCount = services.filter(
+    (s) => s.status?.toLowerCase() === 'up' || s.status?.toLowerCase() === 'ok'
+  ).length;
+  const downCount = services.filter(
+    (s) => s.status?.toLowerCase() === 'down' || s.status?.toLowerCase() === 'error'
+  ).length;
+  const totalCount = services.length;
+
+  // ── Render helpers ────────────────────────────────────────────
+  const renderService = ({ item }: { item: Service }) => {
+    const color = statusColor(item.status);
+    return (
+      <Card
+        accent={color}
+        style={styles.serviceCard}
+        // Step D of roadmap: onPress navigates to service detail view
+        // onPress={() => router.push(`/service/${item.name}`)}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.serviceName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <StatusBadge status={item.status} size="sm" />
+        </View>
+
+        <View style={styles.cardMetrics}>
+          <MetricRow
+            label="Type"
+            value={item.type?.toUpperCase() ?? '—'}
+          />
+          {item.response_time_ms != null && (
+            <MetricRow
+              label="Response"
+              value={`${item.response_time_ms} ms`}
+              valueColor={color}
+            />
+          )}
+          {item.url && (
+            <MetricRow
+              label="Target"
+              value={item.url}
+              mono={false}
+            />
+          )}
+          {item.last_checked && (
+            <MetricRow
+              label="Checked"
+              value={item.last_checked}
+            />
+          )}
+        </View>
+      </Card>
+    );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4ade80" />
-        <Text style={styles.loadingText}>Checking services...</Text>
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      {/* Wordmark */}
+      <View style={styles.wordmark}>
+        <Text style={styles.wordmarkPrimary}>Lab</Text>
+        <Text style={styles.wordmarkAccent}>Watch</Text>
       </View>
-    );
-  }
+      <Text style={styles.backendLabel}>{API_URL}</Text>
 
-  if (error) {
+      {/* Summary strip */}
+      {fetchState !== 'loading' && services.length > 0 && (
+        <View style={styles.summaryStrip}>
+          <SummaryPill
+            count={upCount}
+            label="UP"
+            color={Colors.statusUp}
+          />
+          {downCount > 0 && (
+            <SummaryPill
+              count={downCount}
+              label="DOWN"
+              color={Colors.statusDown}
+            />
+          )}
+          <SummaryPill
+            count={totalCount}
+            label="TOTAL"
+            color={Colors.textSecondary}
+          />
+          {lastUpdated && (
+            <Text style={styles.lastUpdated}>Updated {lastUpdated}</Text>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  const renderEmpty = () => {
+    if (fetchState === 'loading') {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={Colors.accent} size="large" />
+          <Text style={styles.emptyStateText}>Connecting to backend...</Text>
+        </View>
+      );
+    }
+    if (fetchState === 'error') {
+      return (
+        <View style={styles.emptyState}>
+          <Text style={styles.errorTitle}>Connection failed</Text>
+          <Text style={styles.errorBody}>{errorMessage}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => fetchServices()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchStatus}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No services returned.</Text>
       </View>
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
-
-      <Text style={styles.title}>LabWatch</Text>
-      <Text style={styles.subtitle}>Last checked: {lastChecked}</Text>
-
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryBox}>
-          <Text style={[styles.summaryNumber, { color: '#60a5fa' }]}>{data?.total}</Text>
-          <Text style={styles.summaryLabel}>Total</Text>
-        </View>
-        <View style={styles.summaryBox}>
-          <Text style={[styles.summaryNumber, { color: '#4ade80' }]}>{data?.up}</Text>
-          <Text style={styles.summaryLabel}>Online</Text>
-        </View>
-        <View style={styles.summaryBox}>
-          <Text style={[styles.summaryNumber, { color: '#f87171' }]}>{data?.down}</Text>
-          <Text style={styles.summaryLabel}>Offline</Text>
-        </View>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
 
       <FlatList
-        data={data?.results}
+        data={services}
         keyExtractor={(item) => item.name}
+        renderItem={renderService}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" />
+          <RefreshControl
+            refreshing={fetchState === 'refreshing'}
+            onRefresh={() => fetchServices(true)}
+            tintColor={Colors.accent}
+            colors={[Colors.accent]}
+          />
         }
-        renderItem={({ item }) => (
-          <View style={[styles.card, item.status === 'up' ? styles.cardUp : styles.cardDown]}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <View style={[styles.badge, item.status === 'up' ? styles.badgeUp : styles.badgeDown]}>
-                <Text style={[styles.badgeText, { color: item.status === 'up' ? '#4ade80' : '#f87171' }]}>
-                  {item.status.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.cardDetail}>
-              Target: <Text style={styles.cardValue}>{item.target}</Text>
-            </Text>
-            <Text style={styles.cardDetail}>
-              Response: <Text style={styles.cardValue}>
-                {item.response_time_ms !== null ? `${item.response_time_ms} ms` : 'N/A'}
-              </Text>
-            </Text>
-            <Text style={styles.cardDetail}>
-              HTTP: <Text style={styles.cardValue}>
-                {item.status_code !== null ? item.status_code : 'Unreachable'}
-              </Text>
-            </Text>
-          </View>
-        )}
       />
 
-      <TouchableOpacity style={styles.refreshButton} onPress={fetchStatus}>
-        <Text style={styles.refreshText}>Refresh Now</Text>
-      </TouchableOpacity>
+      {/* Manual refresh button in bottom-right corner */}
+      {fetchState !== 'loading' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => fetchServices(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.fabIcon}>↻</Text>
+        </TouchableOpacity>
+      )}
+    </SafeAreaView>
+  );
+}
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function SummaryPill({
+  count,
+  label,
+  color,
+}: {
+  count: number;
+  label: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.summaryPill}>
+      <Text style={[styles.summaryCount, { color }]}>{count}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
     </View>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#0f1117',
-    paddingTop: 60,
-    paddingHorizontal: 16,
+    backgroundColor: Colors.bg,
   },
-  centered: {
-    flex: 1,
-    backgroundColor: '#0f1117',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl + 64, // clear the FAB
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 4,
+
+  // Header
+  headerContainer: {
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
   },
-  subtitle: {
-    color: '#666',
-    textAlign: 'center',
-    fontSize: 12,
-    marginBottom: 20,
-  },
-  summaryRow: {
+  wordmark: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 20,
+    alignItems: 'baseline',
+    marginBottom: 2,
   },
-  summaryBox: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    minWidth: 90,
-  },
-  summaryNumber: {
+  wordmarkPrimary: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: Typography.weightBold,
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  wordmarkAccent: {
+    fontSize: 28,
+    fontWeight: Typography.weightBold,
+    color: Colors.accent,
+    letterSpacing: -0.5,
+  },
+  backendLabel: {
+    fontSize: Typography.sizeCaption,
+    color: Colors.textSecondary,
+    fontFamily: Typography.mono,
+    marginBottom: Spacing.md,
+  },
+  summaryStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flexWrap: 'wrap',
+  },
+  summaryPill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: Typography.weightBold,
+    fontFamily: Typography.mono,
   },
   summaryLabel: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: Typography.sizeCaption,
+    color: Colors.textSecondary,
+    fontWeight: Typography.weightMedium,
+    letterSpacing: 0.5,
   },
-  card: {
-    backgroundColor: '#1a1d27',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
+  lastUpdated: {
+    fontSize: Typography.sizeCaption,
+    color: Colors.textDisabled,
+    fontFamily: Typography.mono,
+    marginLeft: 'auto',
   },
-  cardUp:   { borderLeftColor: '#4ade80' },
-  cardDown: { borderLeftColor: '#f87171' },
+
+  // Service cards
+  serviceCard: {
+    // no extra style needed — Card handles padding and border
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  cardName: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+  serviceName: {
+    fontSize: Typography.sizeLabel,
+    fontWeight: Typography.weightBold,
+    color: Colors.textPrimary,
+    flex: 1,
+    marginRight: Spacing.sm,
   },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
+  cardMetrics: {
+    gap: 0,
   },
-  badgeUp:   { backgroundColor: '#14532d' },
-  badgeDown: { backgroundColor: '#450a0a' },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
+  separator: {
+    height: Spacing.sm,
   },
-  cardDetail: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 2,
+
+  // Empty / error states
+  emptyState: {
+    paddingTop: Spacing.xxl * 2,
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  cardValue: {
-    color: '#aaa',
+  emptyStateText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.sizeBody,
   },
-  loadingText: {
-    color: '#666',
-    marginTop: 12,
+  errorTitle: {
+    color: Colors.statusDown,
+    fontSize: Typography.sizeLabel,
+    fontWeight: Typography.weightBold,
   },
-  errorText: {
-    color: '#f87171',
+  errorBody: {
+    color: Colors.textSecondary,
+    fontSize: Typography.sizeBody,
+    fontFamily: Typography.mono,
     textAlign: 'center',
-    lineHeight: 24,
   },
   retryButton: {
-    marginTop: 16,
-    backgroundColor: '#2a2d3a',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.accent,
   },
-  retryText: {
-    color: '#aaa',
+  retryButtonText: {
+    color: Colors.accent,
+    fontSize: Typography.sizeBody,
+    fontWeight: Typography.weightMedium,
   },
-  refreshButton: {
-    backgroundColor: '#1a1d27',
-    padding: 14,
-    borderRadius: 10,
+
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: Spacing.xl,
+    right: Spacing.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.accent,
     alignItems: 'center',
-    marginVertical: 12,
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
-  refreshText: {
-    color: '#aaa',
-    fontSize: 14,
+  fabIcon: {
+    color: Colors.textInverted,
+    fontSize: 22,
+    fontWeight: Typography.weightBold,
   },
 });

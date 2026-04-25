@@ -1,53 +1,169 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * LabWatch Design System
+ * Auxcon Technologies
+ *
+ * Replaces the Expo template color tokens entirely.
+ * All UI components pull from this file — never hardcode colors.
+ *
+ * Aesthetic: industrial dark, ops-grade, Grafana/Datadog reference.
+ * Color is used for status signal only — not decoration.
  */
 
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
-};
+  // ── Backgrounds ──────────────────────────────────────────────
+  /** Primary app background. Nearly black, slight blue tint. */
+  bg: '#0A0C10',
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+  /** Card / surface background. Lifted one step above bg. */
+  surface: '#141820',
+
+  /** Modal, popover, input background. */
+  surfaceElevated: '#1A2030',
+
+  // ── Borders ───────────────────────────────────────────────────
+  /** Default border. Subtle rule between surface and bg. */
+  border: '#1E2430',
+
+  /** Active / focused border. Used on selected inputs and tiles. */
+  borderActive: '#00D4FF40', // accent at 25% opacity
+
+  // ── Accent ────────────────────────────────────────────────────
+  /** Primary interactive accent. Buttons, links, active tabs, logo. */
+  accent: '#00D4FF',
+
+  /** Accent at reduced opacity for backgrounds/glows. */
+  accentSubtle: '#00D4FF1A', // 10% opacity
+
+  // ── Status ────────────────────────────────────────────────────
+  /** Service is reachable and within normal latency. */
+  statusUp: '#00C48C',
+  statusUpSubtle: '#00C48C1A',
+
+  /** Service is reachable but latency is elevated. */
+  statusDegraded: '#FFB020',
+  statusDegradedSubtle: '#FFB0201A',
+
+  /** Service is unreachable. */
+  statusDown: '#FF4D4D',
+  statusDownSubtle: '#FF4D4D1A',
+
+  /** Status unknown — no check has completed yet. */
+  statusUnknown: '#4A5568',
+  statusUnknownSubtle: '#4A55681A',
+
+  // ── Text ──────────────────────────────────────────────────────
+  /** Primary text. Screen titles, service names, key values. */
+  textPrimary: '#F0F4F8',
+
+  /** Secondary text. Labels, timestamps, helper copy. */
+  textSecondary: '#8892A4',
+
+  /** Disabled / placeholder text. */
+  textDisabled: '#3D4A5C',
+
+  /** Inverted text. Used on accent-colored buttons. */
+  textInverted: '#0A0C10',
+} as const;
+
+export const Typography = {
+  // ── Font families ─────────────────────────────────────────────
+  /**
+   * Data / monospace.
+   * Used for: response times, IP addresses, version strings, uptime %.
+   * Ops people expect metrics to look like terminal output.
+   */
+  mono: 'Courier New',
+
+  /**
+   * UI sans-serif.
+   * Platform default condensed sans — avoid Inter/Roboto generic feel.
+   * On Android this resolves to Roboto Condensed; on iOS to SF Pro.
+   */
+  sans: undefined, // undefined = system default, which is fine for RN
+
+  // ── Scale ─────────────────────────────────────────────────────
+  /** Screen titles, section headers. */
+  sizeHeading: 20,
+
+  /** Card / tile headers. Service names. */
+  sizeLabel: 14,
+
+  /** Body values, metric readings. */
+  sizeBody: 13,
+
+  /** Timestamps, units, secondary metadata. */
+  sizeCaption: 11,
+
+  // ── Weights ───────────────────────────────────────────────────
+  weightBold: '700' as const,
+  weightMedium: '500' as const,
+  weightRegular: '400' as const,
+} as const;
+
+export const Spacing = {
+  /** 4px base unit */
+  xs: 4,
+  /** 8px */
+  sm: 8,
+  /** 12px */
+  md: 12,
+  /** 16px */
+  lg: 16,
+  /** 24px */
+  xl: 24,
+  /** 32px */
+  xxl: 32,
+} as const;
+
+export const Radius = {
+  /** Input fields, small elements */
+  sm: 6,
+  /** Cards, tiles */
+  md: 10,
+  /** Modals, sheets */
+  lg: 16,
+  /** Pills, badges */
+  pill: 100,
+} as const;
+
+/**
+ * Derive a status color from a service status string.
+ * Centralises the mapping so every component stays in sync.
+ */
+export function statusColor(status: string): string {
+  switch (status?.toLowerCase()) {
+    case 'up':
+    case 'ok':
+    case 'healthy':
+      return Colors.statusUp;
+    case 'degraded':
+    case 'slow':
+    case 'warning':
+      return Colors.statusDegraded;
+    case 'down':
+    case 'error':
+    case 'unreachable':
+      return Colors.statusDown;
+    default:
+      return Colors.statusUnknown;
+  }
+}
+
+export function statusSubtleColor(status: string): string {
+  switch (status?.toLowerCase()) {
+    case 'up':
+    case 'ok':
+    case 'healthy':
+      return Colors.statusUpSubtle;
+    case 'degraded':
+    case 'slow':
+    case 'warning':
+      return Colors.statusDegradedSubtle;
+    case 'down':
+    case 'error':
+    case 'unreachable':
+      return Colors.statusDownSubtle;
+    default:
+      return Colors.statusUnknownSubtle;
+  }
+}

@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getBackendUrl, DEFAULT_BACKEND_URL } from '../../src/storage/backend';
 import { Card } from '../../components/Card';
 import { StatusBadge } from '../../components/StatusBadge';
 import { MetricRow } from '../../components/MetricRow';
@@ -36,9 +37,6 @@ import {
 } from '../../constants/theme';
 
 // ─── TODO Step A ────────────────────────────────────────────────────────────
-// Replace this constant with getBackendUrl() from storage/backend.ts
-// so the URL is user-configurable with this as the default fallback.
-const API_URL = 'https://api.auxcon.dev';
 const POLL_INTERVAL_MS = 30_000;
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -58,13 +56,14 @@ export default function DashboardScreen() {
   const [fetchState, setFetchState] = useState<FetchState>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [apiUrl, setApiUrl] = useState<string>(DEFAULT_BACKEND_URL);
 
-  const fetchServices = useCallback(async (isRefresh = false) => {
+  const fetchServices = useCallback(async (isRefresh = false, url = apiUrl) => {
     if (!isRefresh) setFetchState('loading');
     else setFetchState('refreshing');
 
     try {
-      const res = await fetch(`${API_URL}/status`);
+      const res = await fetch(`${url}/status`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       // API returns either an array directly or { services: [...] }
@@ -83,12 +82,15 @@ export default function DashboardScreen() {
 
   // Initial load
   useEffect(() => {
-    fetchServices();
-  }, [fetchServices]);
+  getBackendUrl().then((url) => {
+    setApiUrl(url);
+    fetchServices(false, url);
+  });
+}, []);
 
   // Polling
   useEffect(() => {
-    const timer = setInterval(() => fetchServices(), POLL_INTERVAL_MS);
+    const timer = setInterval(() => fetchServices(false, apiUrl), POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [fetchServices]);
 
@@ -156,7 +158,7 @@ export default function DashboardScreen() {
           <Text style={styles.wordmarkPrimary}>Lab</Text>
           <Text style={styles.wordmarkAccent}>Watch</Text>
         </View>
-        <Text style={styles.backendLabel}>{API_URL}</Text>
+        <Text style={styles.backendLabel}>{apiUrl}</Text>
       </View>
       <TouchableOpacity style={styles.gearButton}>
         <Text style={styles.gearIcon}>⚙</Text>

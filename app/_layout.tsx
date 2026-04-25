@@ -1,8 +1,10 @@
 import { Theme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { Colors } from '@/constants/theme';
+import { getHasOnboarded } from '@/src/storage/backend';
 
 const LabWatchTheme: Theme = {
   dark: true,
@@ -23,14 +25,26 @@ const LabWatchTheme: Theme = {
 };
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: '(tabs)',
 };
 
 export default function RootLayout() {
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    getHasOnboarded().then((onboarded) => {
+      if (!onboarded) {
+        router.replace('/welcome');
+      }
+      setChecked(true);
+    });
+  }, []);
+
   return (
     <ThemeProvider value={LabWatchTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

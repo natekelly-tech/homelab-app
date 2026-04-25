@@ -8,8 +8,8 @@
  * Step A of the pivot roadmap (AsyncStorage + Settings screen) will
  * replace the hardcoded URL with a user-configurable value.
  *
- * TODO (Step A): replace API_URL constant with getBackendUrl() from
- * src/storage/backend.ts once AsyncStorage layer is in place.
+ * Steps A and C complete. AsyncStorage backend storage, Settings screen,
+ * configurable backend URL, and onboarding flow all wired up.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -161,7 +161,7 @@ export default function DashboardScreen() {
         </View>
         <Text style={styles.backendLabel}>{apiUrl}</Text>
       </View>
-      <TouchableOpacity style={styles.gearButton} onPress={() => router.push('/settings')}>
+      <TouchableOpacity style={styles.gearButton} onPress={() => router.push('/(tabs)/settings')}>
         <Text style={styles.gearIcon}>⚙</Text>
       </TouchableOpacity>
     </View>

@@ -44,3 +44,18 @@ export async function resetBackendUrl(): Promise<void> {
 }
 
 export { DEFAULT_BACKEND_URL };
+
+const ONBOARDED_KEY = 'labwatch:has_onboarded';
+
+export async function getHasOnboarded(): Promise<boolean> {
+  try {
+    const val = await AsyncStorage.getItem(ONBOARDED_KEY);
+    return val === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function setHasOnboarded(): Promise<void> {
+  await AsyncStorage.setItem(ONBOARDED_KEY, 'true');
+}

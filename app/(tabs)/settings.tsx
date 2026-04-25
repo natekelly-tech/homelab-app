@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -71,12 +72,13 @@ export default function SettingsScreen() {
   };
 
   const reset = async () => {
-    await resetBackendUrl();
-    setUrl(DEFAULT_BACKEND_URL);
-    setSavedUrl(DEFAULT_BACKEND_URL);
-    setTestState('idle');
-    setTestMessage('');
-  };
+  await resetBackendUrl();
+  await AsyncStorage.removeItem('labwatch:has_onboarded');
+  setUrl(DEFAULT_BACKEND_URL);
+  setSavedUrl(DEFAULT_BACKEND_URL);
+  setTestState('idle');
+  setTestMessage('');
+};
 
   const hasChanges = url.trim().replace(/\/+$/, '') !== savedUrl;
 

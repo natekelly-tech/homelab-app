@@ -1,70 +1,59 @@
-# LabWatch Mobile App — Release Process
+# LabWatch Mobile App
 Auxcon Technologies
 
-## Branching
+A universal infrastructure monitoring client for Android and iOS.
+Point it at any LabWatch-compatible backend and get a live dashboard
+of your services in seconds.
 
-All work happens on feature branches. No commits go directly to main.
-Open a PR against main, self-review the diff, then merge.
+## What it does
 
-## Versioning
+- Connects to any self-hosted LabWatch backend
+- Displays real-time service status, response times, and uptime
+- Configurable backend URL with connection validation
+- Works with the Auxcon demo backend out of the box — no setup required
 
-Version numbers live in app.json under the version field.
-Follow semantic versioning: MAJOR.MINOR.PATCH
+## Quick start
 
-- PATCH: bug fixes, content changes, JS-only changes
-- MINOR: new features (new screen, new capability)
-- MAJOR: breaking changes to the API contract or architecture
+1. Install the app from Google Play or the Apple App Store
+2. Open it — you will see a live dashboard powered by api.auxcon.dev
+3. To connect your own backend, go to Settings and enter your backend URL
 
-The runtimeVersion in app.json controls which OTA bundles are
-compatible with which installed native shells. Bump it when native
-code changes.
+## Run your own backend
 
-## Build Profiles (eas.json)
+Pull the official Docker image:
 
-| Profile     | Purpose                  | Audience            |
-|-------------|--------------------------|---------------------|
-| development | Local dev builds         | Developer only      |
-| preview     | Pre-release testing      | Developer + testers |
-| production  | Store submission         | End users           |
+    docker pull auxcon/labwatch-api:latest
+    docker run -d -p 8080:8080 auxcon/labwatch-api:latest
 
-## Release Workflow
+Then open Settings in the app and point it at your server.
 
-### JS-only changes (bug fixes, copy, styling)
-No native code touched. Ship via OTA update.
+Full backend documentation: github.com/natekelly-tech/homelab-monitoring-project
 
-1. Bump version in app.json (PATCH)
-2. Commit and push to main
-3. Run: eas update --branch production --message "fix: description"
+## Development
 
-OTA updates reach installed apps automatically on next launch.
-No store review required.
+    git clone https://github.com/natekelly-tech/homelab-app.git
+    cd homelab-app
+    npm install
+    npx expo start
 
-### Feature releases (new screens, new dependencies)
-Native code or new packages may be involved. Requires a full build.
+Requires Node.js and the Expo CLI.
+Uses EAS for production builds — see RELEASE.md for the full release process.
 
-1. Bump version in app.json
-2. Commit and push to main via PR
-3. Build preview binary: eas build --profile preview --platform android
-4. Install on phone, test against live backend for at least one day
-5. Build production binary: eas build --profile production --platform android
-6. Submit to Play Store: eas submit --platform android
-7. Promote through tracks in Play Console: internal -> closed beta -> production
+## Tech stack
 
-### Rollback
-OTA rollback: publish a previous bundle to the production branch.
-Native rollback: promote the previous approved build in Play Console.
+- Expo SDK 54 / React Native 0.81
+- TypeScript strict mode
+- AsyncStorage for on-device persistence
+- EAS Build and Submit for store distribution
 
-## Changelog
+## Architecture
 
-CHANGELOG.md at repo root. One entry per release.
+All user data stays on device. The app never sends your infrastructure
+metadata to Auxcon servers. The backend you point the app at is your
+own — we only host api.auxcon.dev as a reference implementation and demo.
 
-Example:
-    0.2.0 — 2026-05-01
-    Added: Settings screen with configurable backend URL
-    Added: AsyncStorage persistence layer
-    Fixed: SafeAreaView deprecation warning
+## Links
 
-## What Never Goes to Production Automatically
-
-Nothing. Every production release is a manual promotion step.
-There is no auto-deploy to the store. The manual step is intentional.
+- Backend repo: github.com/natekelly-tech/homelab-monitoring-project
+- Docker image: hub.docker.com/r/auxcon/labwatch-api
+- Demo backend: https://api.auxcon.dev

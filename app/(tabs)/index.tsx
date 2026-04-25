@@ -31,6 +31,7 @@ import {
   Colors,
   Typography,
   Spacing,
+  Radius,
   statusColor,
 } from '../../constants/theme';
 
@@ -148,41 +149,34 @@ export default function DashboardScreen() {
   };
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      {/* Wordmark */}
-      <View style={styles.wordmark}>
-        <Text style={styles.wordmarkPrimary}>Lab</Text>
-        <Text style={styles.wordmarkAccent}>Watch</Text>
-      </View>
-      <Text style={styles.backendLabel}>{API_URL}</Text>
-
-      {/* Summary strip */}
-      {fetchState !== 'loading' && services.length > 0 && (
-        <View style={styles.summaryStrip}>
-          <SummaryPill
-            count={upCount}
-            label="UP"
-            color={Colors.statusUp}
-          />
-          {downCount > 0 && (
-            <SummaryPill
-              count={downCount}
-              label="DOWN"
-              color={Colors.statusDown}
-            />
-          )}
-          <SummaryPill
-            count={totalCount}
-            label="TOTAL"
-            color={Colors.textSecondary}
-          />
-          {lastUpdated && (
-            <Text style={styles.lastUpdated}>Updated {lastUpdated}</Text>
-          )}
+  <View style={styles.headerContainer}>
+    <View style={styles.headerTop}>
+      <View>
+        <View style={styles.wordmark}>
+          <Text style={styles.wordmarkPrimary}>Lab</Text>
+          <Text style={styles.wordmarkAccent}>Watch</Text>
         </View>
-      )}
+        <Text style={styles.backendLabel}>{API_URL}</Text>
+      </View>
+      <TouchableOpacity style={styles.gearButton}>
+        <Text style={styles.gearIcon}>⚙</Text>
+      </TouchableOpacity>
     </View>
-  );
+
+    {fetchState !== 'loading' && services.length > 0 && (
+      <View style={styles.summaryStrip}>
+        <SummaryPill count={upCount} label="UP" color={Colors.statusUp} />
+        {downCount > 0 && (
+          <SummaryPill count={downCount} label="DOWN" color={Colors.statusDown} />
+        )}
+        <SummaryPill count={totalCount} label="TOTAL" color={Colors.textSecondary} />
+        {lastUpdated && (
+          <Text style={styles.lastUpdated}>Updated {lastUpdated}</Text>
+        )}
+      </View>
+    )}
+  </View>
+);
 
   const renderEmpty = () => {
     if (fetchState === 'loading') {
@@ -283,60 +277,76 @@ const styles = StyleSheet.create({
 
   // Header
   headerContainer: {
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.lg,
-  },
-  wordmark: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 2,
-  },
-  wordmarkPrimary: {
-    fontSize: 28,
-    fontWeight: Typography.weightBold,
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  wordmarkAccent: {
-    fontSize: 28,
-    fontWeight: Typography.weightBold,
-    color: Colors.accent,
-    letterSpacing: -0.5,
-  },
-  backendLabel: {
-    fontSize: Typography.sizeCaption,
-    color: Colors.textSecondary,
-    fontFamily: Typography.mono,
-    marginBottom: Spacing.md,
-  },
-  summaryStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    flexWrap: 'wrap',
-  },
-  summaryPill: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  summaryCount: {
-    fontSize: 18,
-    fontWeight: Typography.weightBold,
-    fontFamily: Typography.mono,
-  },
-  summaryLabel: {
-    fontSize: Typography.sizeCaption,
-    color: Colors.textSecondary,
-    fontWeight: Typography.weightMedium,
-    letterSpacing: 0.5,
-  },
-  lastUpdated: {
-    fontSize: Typography.sizeCaption,
-    color: Colors.textDisabled,
-    fontFamily: Typography.mono,
-    marginLeft: 'auto',
-  },
+  paddingTop: Spacing.xxl,
+  paddingBottom: Spacing.lg,
+},
+headerTop: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  marginBottom: Spacing.md,
+},
+wordmark: {
+  flexDirection: 'row',
+  alignItems: 'baseline',
+  marginBottom: 2,
+},
+wordmarkPrimary: {
+  fontSize: 32,
+  fontWeight: Typography.weightBold,
+  color: Colors.textPrimary,
+  letterSpacing: -0.5,
+},
+wordmarkAccent: {
+  fontSize: 32,
+  fontWeight: Typography.weightBold,
+  color: Colors.accent,
+  letterSpacing: -0.5,
+},
+backendLabel: {
+  fontSize: Typography.sizeCaption,
+  color: Colors.textSecondary,
+  fontFamily: Typography.mono,
+},
+gearButton: {
+  backgroundColor: Colors.surface,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: Radius.sm,
+  padding: Spacing.sm,
+},
+gearIcon: {
+  fontSize: 18,
+  color: Colors.textSecondary,
+},
+summaryStrip: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: Spacing.md,
+  flexWrap: 'wrap',
+},
+summaryPill: {
+  flexDirection: 'row',
+  alignItems: 'baseline',
+  gap: 4,
+},
+summaryCount: {
+  fontSize: 22,
+  fontWeight: Typography.weightBold,
+  fontFamily: Typography.mono,
+},
+summaryLabel: {
+  fontSize: Typography.sizeCaption,
+  color: Colors.textSecondary,
+  fontWeight: Typography.weightMedium,
+  letterSpacing: 0.5,
+},
+lastUpdated: {
+  fontSize: Typography.sizeCaption,
+  color: Colors.textDisabled,
+  fontFamily: Typography.mono,
+  marginLeft: 'auto',
+},
 
   // Service cards
   serviceCard: {

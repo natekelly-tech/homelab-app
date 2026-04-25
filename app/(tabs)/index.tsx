@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getBackendUrl, DEFAULT_BACKEND_URL } from '../../src/storage/backend';
 import { Card } from '../../components/Card';
@@ -160,7 +161,7 @@ export default function DashboardScreen() {
         </View>
         <Text style={styles.backendLabel}>{apiUrl}</Text>
       </View>
-      <TouchableOpacity style={styles.gearButton}>
+      <TouchableOpacity style={styles.gearButton} onPress={() => router.push('/settings')}>
         <Text style={styles.gearIcon}>⚙</Text>
       </TouchableOpacity>
     </View>

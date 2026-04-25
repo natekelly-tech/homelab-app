@@ -19,11 +19,11 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { StatusBadge } from '../../components/StatusBadge';
 import { MetricRow } from '../../components/MetricRow';
@@ -46,7 +46,7 @@ type Service = {
   status: string;
   type: string;
   response_time_ms?: number;
-  url?: string;
+  target?: string;
   last_checked?: string;
 };
 
@@ -67,7 +67,7 @@ export default function DashboardScreen() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       // API returns either an array directly or { services: [...] }
-      const list: Service[] = Array.isArray(data) ? data : data.services ?? [];
+      const list: Service[] = Array.isArray(data) ? data : data.results ?? data.services ?? [];
       setServices(list);
       setErrorMessage(null);
       setFetchState('idle');
@@ -129,10 +129,10 @@ export default function DashboardScreen() {
               valueColor={color}
             />
           )}
-          {item.url && (
+          {item.target && (
             <MetricRow
               label="Target"
-              value={item.url}
+              value={item.target}
               mono={false}
             />
           )}

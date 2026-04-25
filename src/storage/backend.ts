@@ -1,51 +1,111 @@
 /**
  * src/storage/backend.ts
- * LabWatch — Backend URL storage helper
+ * LabWatch — Backend storage helper
  *
- * Single source of truth for reading and writing the active backend URL.
- * All other code calls these functions — nothing reads AsyncStorage directly.
- *
- * Default falls back to the Auxcon demo backend so new users see a working
- * dashboard immediately with zero setup.
+ * Step E update: adds saved backends list and active selection.
+ * getBackendUrl() is unchanged so index.tsx and welcome.tsx need no edits.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL_KEY = 'labwatch:backend_url';
-const DEFAULT_BACKEND_URL = 'https://api.auxcon.dev';
+// --- Types ---
 
-/**
- * Get the currently saved backend URL.
- * Returns the default if nothing has been saved yet.
- */
-export async function getBackendUrl(): Promise<string> {
+export type SavedBackend = {
+  id: string;     // unique identifier, timestamp string at creation time
+  label: string;  // user-defined friendly name e.g. "Home Lab"
+  url: string;    // full backend URL
+};
+
+// --- Constants ---
+
+export const DEFAULT_BACKEND_URL = 'https://api.auxcon.dev';
+
+export const DEMO_BACKEND: SavedBackend = {
+  id: 'demo',
+  label: 'Demo (api.auxcon.dev)',
+  url: DEFAULT_BACKEND_URL,
+};
+
+// AsyncStorage keys
+const BACKENDS_KEY = 'labwatch:saved_backends';
+const ACTIVE_BACKEND_ID_KEY = 'labwatch:active_backend_id';
+const ONBOARDED_KEY = 'labwatch:has_onboarded';
+
+// --- Saved Backends List ---
+
+export async function getSavedBackends(): Promise<SavedBackend[]> {
   try {
-    const saved = await AsyncStorage.getItem(BACKEND_URL_KEY);
-    return saved ?? DEFAULT_BACKEND_URL;
+    const raw = await AsyncStorage.getItem(BACKENDS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SavedBackend[];
   } catch {
-    return DEFAULT_BACKEND_URL;
+    return [];
   }
 }
 
-/**
- * Save a new backend URL.
- * Strips trailing slashes so URLs are always in a consistent format.
- */
+export async function addSavedBackend(backend: SavedBackend): Promise<void> {
+  const existing = await getSavedBackends();
+  // Prevent duplicates by URL -- newest entry wins
+  const deduped = existing.filter(b => b.url !== backend.url);
+  await AsyncStorage.setItem(BACKENDS_KEY, JSON.stringify([...deduped, backend]));
+}
+
+export async function removeSavedBackend(id: string): Promise<void> {
+  const existing = await getSavedBackends();
+  const updated = existing.filter(b => b.id !== id);
+  await AsyncStorage.setItem(BACKENDS_KEY, JSON.stringify(updated));
+  // If the deleted backend was active, fall back to demo
+  const activeId = await getActiveBackendId();
+  if (activeId === id) {
+    await setActiveBackendId('demo');
+  }
+}
+
+// --- Active Backend Selection ---
+
+export async function getActiveBackendId(): Promise<string> {
+  try {
+    const id = await AsyncStorage.getItem(ACTIVE_BACKEND_ID_KEY);
+    return id ?? 'demo';
+  } catch {
+    return 'demo';
+  }
+}
+
+export async function setActiveBackendId(id: string): Promise<void> {
+  await AsyncStorage.setItem(ACTIVE_BACKEND_ID_KEY, id);
+}
+
+// --- Derived: Active Backend URL ---
+// Called by index.tsx and welcome.tsx. No changes needed in those files.
+
+export async function getBackendUrl(): Promise<string> {
+  const activeId = await getActiveBackendId();
+  if (activeId === 'demo') return DEFAULT_BACKEND_URL;
+  const backends = await getSavedBackends();
+  const match = backends.find(b => b.id === activeId);
+  return match?.url ?? DEFAULT_BACKEND_URL;
+}
+
 export async function setBackendUrl(url: string): Promise<void> {
+  // Kept for compatibility with settings.tsx direct URL saves.
+  // Creates a backend entry and makes it active.
   const clean = url.trim().replace(/\/+$/, '');
-  await AsyncStorage.setItem(BACKEND_URL_KEY, clean);
+  const id = Date.now().toString();
+  const backend: SavedBackend = {
+    id,
+    label: new URL(clean).hostname,
+    url: clean,
+  };
+  await addSavedBackend(backend);
+  await setActiveBackendId(id);
 }
 
-/**
- * Reset the backend URL back to the default.
- */
 export async function resetBackendUrl(): Promise<void> {
-  await AsyncStorage.removeItem(BACKEND_URL_KEY);
+  await setActiveBackendId('demo');
 }
 
-export { DEFAULT_BACKEND_URL };
-
-const ONBOARDED_KEY = 'labwatch:has_onboarded';
+// --- Onboarding ---
 
 export async function getHasOnboarded(): Promise<boolean> {
   try {
@@ -56,6 +116,6 @@ export async function getHasOnboarded(): Promise<boolean> {
   }
 }
 
-export async function setHasOnboarded(): Promise<void> {
-  await AsyncStorage.setItem(ONBOARDED_KEY, 'true');
+export async function setHasOnboarded(value: boolean = true): Promise<void> {
+  await AsyncStorage.setItem(ONBOARDED_KEY, value ? 'true' : 'false');
 }

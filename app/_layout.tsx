@@ -45,6 +45,7 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="service/[name]" options={{ headerShown: false }}/>
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

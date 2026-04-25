@@ -5,6 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -36,6 +38,7 @@ export default function SettingsScreen() {
   const [savedUrl, setSavedUrl] = useState('');
   const [testState, setTestState] = useState<TestState>('idle');
   const [testMessage, setTestMessage] = useState('');
+  const router = useRouter();  // add this line
 
   useEffect(() => {
     getBackendUrl().then((u) => {
@@ -88,9 +91,23 @@ export default function SettingsScreen() {
 
         <Text style={styles.screenTitle}>Settings</Text>
 
-        {/* Backend URL section */}
-        <Text style={styles.sectionLabel}>BACKEND</Text>
-        <View style={styles.card}>
+{/* Backends nav */}
+<Text style={styles.sectionLabel}>BACKENDS</Text>
+<TouchableOpacity
+  style={[styles.card, styles.navRow]}
+  onPress={() => router.push('/backends')}
+  activeOpacity={0.7}
+>
+  <Text style={styles.infoLabel}>Manage Backends</Text>
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+    <Text style={styles.infoValue} numberOfLines={1}>{savedUrl}</Text>
+    <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+  </View>
+</TouchableOpacity>
+
+{/* Backend URL section */}
+<Text style={styles.sectionLabel}>BACKEND</Text>
+          <View style={styles.card}>
           <Text style={styles.fieldLabel}>Backend URL</Text>
           <TextInput
             style={styles.input}
@@ -284,5 +301,11 @@ const styles = StyleSheet.create({
     color: Colors.statusDown,
     fontSize: Typography.sizeBody,
     textAlign: 'center',
+  },
+  navRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: Spacing.md,
   },
 });

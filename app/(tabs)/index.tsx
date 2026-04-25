@@ -111,8 +111,9 @@ export default function DashboardScreen() {
       <Card
         accent={color}
         style={styles.serviceCard}
-        // Step D of roadmap: onPress navigates to service detail view
-        // onPress={() => router.push(`/service/${item.name}`)}
+        onPress={() =>
+        router.push({ pathname: '/service/[name]', params: { name: item.name } })
+      }
       >
         <View style={styles.cardHeader}>
           <Text style={styles.serviceName} numberOfLines={1}>

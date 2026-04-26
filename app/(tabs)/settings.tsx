@@ -1,89 +1,47 @@
 /**
  * app/(tabs)/settings.tsx
  * LabWatch — Settings Screen
- * Step A of the pivot roadmap.
  */
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   getBackendUrl,
-  setBackendUrl,
   resetBackendUrl,
   DEFAULT_BACKEND_URL,
-} from '../../src/storage/backend';
+} from '../../src/storage/backend'
 import {
   Colors,
   Typography,
   Spacing,
   Radius,
-} from '../../constants/theme';
-
-type TestState = 'idle' | 'testing' | 'ok' | 'error';
+} from '../../constants/theme'
 
 export default function SettingsScreen() {
-  const [url, setUrl] = useState('');
-  const [savedUrl, setSavedUrl] = useState('');
-  const [testState, setTestState] = useState<TestState>('idle');
-  const [testMessage, setTestMessage] = useState('');
-  const router = useRouter();  // add this line
+  const [savedUrl, setSavedUrl] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     getBackendUrl().then((u) => {
-      setUrl(u);
       setSavedUrl(u);
     });
   }, []);
 
-  const testConnection = async () => {
-    setTestState('testing');
-    setTestMessage('');
-    try {
-      const clean = url.trim().replace(/\/+$/, '');
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`${clean}/status`, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const count = data.results?.length ?? data.services?.length ?? 0;
-      setTestState('ok');
-      setTestMessage(`Connected — ${count} service${count !== 1 ? 's' : ''} found`);
-    } catch (err: any) {
-      setTestState('error');
-      setTestMessage(err?.message ?? 'Could not reach the backend');
-    }
-  };
-
-  const save = async () => {
-    await setBackendUrl(url);
-    setSavedUrl(url.trim().replace(/\/+$/, ''));
-    setTestState('idle');
-    setTestMessage('');
-  };
-
   const reset = async () => {
-  await resetBackendUrl();
-  await AsyncStorage.removeItem('labwatch:has_onboarded');
-  setUrl(DEFAULT_BACKEND_URL);
-  setSavedUrl(DEFAULT_BACKEND_URL);
-  setTestState('idle');
-  setTestMessage('');
-};
-
-  const hasChanges = url.trim().replace(/\/+$/, '') !== savedUrl;
+    await resetBackendUrl();
+    await AsyncStorage.removeItem('labwatch:has_onboarded');
+    setSavedUrl(DEFAULT_BACKEND_URL);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -105,53 +63,6 @@ export default function SettingsScreen() {
   </View>
 </TouchableOpacity>
 
-{/* Backend URL section */}
-<Text style={styles.sectionLabel}>BACKEND</Text>
-          <View style={styles.card}>
-          <Text style={styles.fieldLabel}>Backend URL</Text>
-          <TextInput
-            style={styles.input}
-            value={url}
-            onChangeText={setUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            placeholder="https://api.auxcon.dev"
-            placeholderTextColor={Colors.textDisabled}
-          />
-
-          {testMessage !== '' && (
-            <Text style={[
-              styles.testMessage,
-              { color: testState === 'ok' ? Colors.statusUp : Colors.statusDown }
-            ]}>
-              {testMessage}
-            </Text>
-          )}
-
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={testConnection}
-              disabled={testState === 'testing'}
-            >
-              {testState === 'testing'
-                ? <ActivityIndicator size="small" color={Colors.accent} />
-                : <Text style={styles.buttonSecondaryText}>
-                    {testState === 'ok' ? '✓ Connected' : 'Test Connection'}
-                  </Text>
-              }
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary, !hasChanges && styles.buttonDisabled]}
-              onPress={save}
-              disabled={!hasChanges}
-            >
-              <Text style={styles.buttonPrimaryText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Active backend info */}
         <Text style={styles.sectionLabel}>ACTIVE</Text>
@@ -184,7 +95,7 @@ export default function SettingsScreen() {
 
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -217,58 +128,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     padding: Spacing.md,
-  },
-  fieldLabel: {
-    fontSize: Typography.sizeCaption,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  input: {
-    color: Colors.textPrimary,
-    fontSize: Typography.sizeBody,
-    fontFamily: Typography.mono,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    marginBottom: Spacing.sm,
-  },
-  testMessage: {
-    fontSize: Typography.sizeCaption,
-    fontFamily: Typography.mono,
-    marginBottom: Spacing.sm,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-  },
-  buttonPrimary: {
-    backgroundColor: Colors.accent,
-  },
-  buttonSecondary: {
-    borderWidth: 1,
-    borderColor: Colors.accent,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  buttonPrimaryText: {
-    color: Colors.textInverted,
-    fontSize: Typography.sizeBody,
-    fontWeight: Typography.weightBold,
-  },
-  buttonSecondaryText: {
-    color: Colors.accent,
-    fontSize: Typography.sizeBody,
-    fontWeight: Typography.weightMedium,
   },
   infoRow: {
     flexDirection: 'row',
@@ -308,4 +167,4 @@ const styles = StyleSheet.create({
   alignItems: 'center',
   paddingVertical: Spacing.md,
   },
-});
+})

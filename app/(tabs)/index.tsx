@@ -37,9 +37,7 @@ import {
   statusColor,
 } from '../../constants/theme';
 
-// ─── TODO Step A ────────────────────────────────────────────────────────────
 const POLL_INTERVAL_MS = 30_000;
-// ────────────────────────────────────────────────────────────────────────────
 
 type Service = {
   name: string;

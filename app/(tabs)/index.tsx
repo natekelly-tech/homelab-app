@@ -1,15 +1,10 @@
 /**
  * app/(tabs)/index.tsx
- * LabWatch — Dashboard Screen
+ * LabWatch -- Dashboard Screen
  *
- * The only production-grade screen that existed before the pivot.
- * Rewired to use the LabWatch design system (theme.ts + primitives).
- * Functional logic is unchanged — URL is still hardcoded on line ~30.
- * Step A of the pivot roadmap (AsyncStorage + Settings screen) will
- * replace the hardcoded URL with a user-configurable value.
- *
- * Steps A and C complete. AsyncStorage backend storage, Settings screen,
- * configurable backend URL, and onboarding flow all wired up.
+ * Fetches GET /status from the active backend every 30 seconds.
+ * Pull-to-refresh and manual FAB refresh also available.
+ * Backend URL sourced from AsyncStorage via getBackendUrl().
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
